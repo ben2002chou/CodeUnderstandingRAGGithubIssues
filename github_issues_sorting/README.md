@@ -1,0 +1,1 @@
+Run the python script. Supply your GitHub Personal Access Token either at the prompt so it's not displayed, or as the second command line argument.
