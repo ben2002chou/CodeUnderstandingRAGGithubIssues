@@ -2,6 +2,7 @@
 # Ignore CSV files
 ./github_issues_sorting/AutoGPT_priority_issues.csv
 ./repository_parser/parsed.csv
+./repository_parser/embedding/output/embedded.csv
 
 # Ignore environment files
 ./repository_parser/.env
