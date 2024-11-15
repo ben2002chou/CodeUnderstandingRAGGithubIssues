@@ -1,10 +1,7 @@
-./github_issues_sorting/AutoGPT_issues_cache.json
-# Ignore CSV files
-./github_issues_sorting/AutoGPT_priority_issues.csv
-./repository_parser/parsed.csv
-./repository_parser/embedding/output/embedded.csv
-
-# Ignore environment files
-./repository_parser/.env
-./github_issues_sorting/.env
-./repository_parser/cloned_repo/
+github_issues_sorting/AutoGPT_issues_cache.json
+github_issues_sorting/AutoGPT_priority_issues.csv
+repository_parser/parsed.csv
+repository_parser/embedding/output/embedded.csv
+repository_parser/.env
+github_issues_sorting/.env
+repository_parser/cloned_repo/
