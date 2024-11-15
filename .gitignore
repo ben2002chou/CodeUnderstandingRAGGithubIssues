@@ -1,0 +1,9 @@
+./github_issues_sorting/AutoGPT_issues_cache.json
+# Ignore CSV files
+./github_issues_sorting/AutoGPT_priority_issues.csv
+./repository_parser/parsed.csv
+
+# Ignore environment files
+./repository_parser/.env
+./github_issues_sorting/.env
+./repository_parser/cloned_repo/
