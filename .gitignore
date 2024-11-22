@@ -4,4 +4,4 @@ repository_parser/parsed.csv
 repository_parser/embedding/output/embedded.csv
 repository_parser/.env
 github_issues_sorting/.env
-repository_parser/cloned_repo/
+repository_parser/cloned_repo/repository_parser/embedding/output/embedded.csv

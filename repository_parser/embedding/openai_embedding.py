@@ -51,13 +51,15 @@ def get_readme_description(local_dir: str):
 
 
 # Set your local repository path
-local_dir = (
-    "../cloned_repo"  # Update to the actual path where your repository is cloned
-)
+local_dir = "cloned_repo"  # Update to the actual path where your repository is cloned
+print("current directory is: ", os.getcwd())
 repo_name = get_repo_name_from_git_config(local_dir)
 repo_description = get_readme_description(local_dir)
 
-df = pd.read_csv("../parsed.csv")
+df = pd.read_csv("parsed.csv")  # Updated CSV file path
+repository_background = (
+    "Provide a repository background here."  # Added repository background
+)
 df["start_row"] = df["start_point"].str.extract(r"row=(\d+)")
 df["end_row"] = df["end_point"].str.extract(r"row=(\d+)")
 df["function_for_LLM"] = (
