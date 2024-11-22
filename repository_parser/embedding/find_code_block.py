@@ -99,7 +99,7 @@ issue_embedding = get_embedding(content)
 print("Generated issue embedding.")
 
 # Load embeddings from a CSV file
-df = pd.read_csv("./output/embedded.csv")
+df = pd.read_csv("../output/embedded.csv")
 df["embedding"] = df["embedding"].apply(ast.literal_eval)
 
 # Find the most related code blocks based on the issue content embedding
