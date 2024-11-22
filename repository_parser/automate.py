@@ -47,6 +47,16 @@ def find_code_block():
         return False
 
 
+def generate_code_comment():
+    try:
+        subprocess.run(["python", "embedding/generate_code_comment.py"], check=True)
+        print("Comment generation completed.")
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"Error running generate_code_comment.py: {e}")
+        return False
+
+
 if __name__ == "__main__":
     repo_url = "https://github.com/Significant-Gravitas/AutoGPT.git"
     clone_path = "./cloned_repo"
@@ -55,3 +65,4 @@ if __name__ == "__main__":
         if run_parser():
             if run_embedding():
                 find_code_block()
+                generate_code_comment()
