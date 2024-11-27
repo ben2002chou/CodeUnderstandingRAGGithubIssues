@@ -48,6 +48,9 @@ if __name__ == "__main__":
     # Clone the repository
     clone_repository(repo_url, local_dir)
 
+    # Set the folder to traverse dynamically based on user input or configuration
+    folder_to_traverse = r"/path-to-repository"  # Updated to dynamic path
+
     # Parse the cloned repository
     definitions = traverse_and_parse(local_dir)
 
