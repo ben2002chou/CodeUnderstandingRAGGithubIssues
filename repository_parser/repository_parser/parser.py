@@ -3,7 +3,7 @@ import subprocess
 import pandas as pd
 from tree_sitter import Language, Parser
 import tree_sitter_python
-from python_parser import *
+from repository_parser.repository_parser.python_parser import *
 
 PYTHON_LANGUAGE = Language(tree_sitter_python.language())
 

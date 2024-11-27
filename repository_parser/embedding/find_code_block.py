@@ -6,7 +6,8 @@ from bs4 import BeautifulSoup
 from openai import OpenAI
 from scipy import spatial  # for calculating vector similarities for search
 import ast
-
+from issue_classifier import classify_issue
+from sparse_retrieval import sparse_retrieve
 load_dotenv()
 
 api_key = os.getenv("OPENAI_API_KEY")
@@ -68,7 +69,6 @@ def strings_ranked_by_relatedness(
     query: str,
     df: pd.DataFrame,
     relatedness_fn=lambda x, y: 1 - spatial.distance.cosine(x, y),
-    top_n: int = 100,
 ):
     """Returns a list of strings and relatednesses, sorted from most related to least."""
     query_embedding_response = client.embeddings.create(
@@ -80,31 +80,65 @@ def strings_ranked_by_relatedness(
         (row["function"], relatedness_fn(query_embedding, row["embedding"]))
         for i, row in df.iterrows()
     ]
-    strings_and_relatednesses.sort(key=lambda x: x[1], reverse=True)
-    strings, relatednesses = zip(*strings_and_relatednesses)
-    return strings[:top_n], relatednesses[:top_n]
+    df['relatedness'] = df['embedding'].apply(lambda x: relatedness_fn(query_embedding, x))
+    df = df.sort_values(by='similarity', ascending=False)
+    df = df.reset_index(drop=True)
+    res = df.head(1)
+
+    return res.loc[0, 'function'], (res.loc[0, 'f_path'], res.loc[0, 'start_row'])
 
 
-# Example usage
-local_dir = "../cloned_repo"  # Replace with the path to the cloned repo if needed
-csv_file = "/Users/Ben/Documents/GitHub/CodeUnderstandingRAGGithubIssues/github_issues_sorting/AutoGPT_priority_issues.csv"  # Replace with your actual file path
-url, title = get_top_issue(csv_file)
-content = fetch_issue_content_with_comments(url)
+def get_place_to_put(local_dir, csv_file):
+    url, title = get_top_issue(csv_file)
+    content = fetch_issue_content_with_comments(url)
+    print("Fetched content for embedding:")
+    print(content[:500])
 
-print("Fetched content for embedding:")
-print(content[:500])  # Print the first 500 characters to check the content
+    df = pd.read_csv("./output/embedded.csv")
+    df["embedding"] = df["embedding"].apply(ast.literal_eval)
+    issue_category = classify_issue(local_dir, title, content)
 
-# Generate embedding for the fetched content
-issue_embedding = get_embedding(content)
-print("Generated issue embedding.")
+    try:
+        issue_category == int(issue_category)
+    except ValueError:
+        print("GPT generated wrong issue post category.")
+    
+    if issue_category == 2:
+        print("code provided, editing it")
+        function_body, place_to_put = sparse_retrieve(content, df)
+    
+    elif issue_category == 3:
+        print("code not provided, general question")
+        function_body , place_to_put = "", ("README.md", -1)
 
-# Load embeddings from a CSV file
-df = pd.read_csv("./output/embedded.csv")
-df["embedding"] = df["embedding"].apply(ast.literal_eval)
+    elif issue_category == 4 or issue_category == 1:
+        print("code not provided, but can be found in the repository")
+        issue_embedding = get_embedding(content)
+        print("Generated issue embedding.")
+        
+        # Find the most related code blocks based on the issue content embedding
+        function_body, place_to_put = strings_ranked_by_relatedness(content, df)
+    else:
+        raise
+    
+    return function_body, place_to_put
 
-# Find the most related code blocks based on the issue content embedding
-strings, relatednesses = strings_ranked_by_relatedness(content, df, top_n=5)
-print("\nTop related code blocks:")
-for string, relatedness in zip(strings, relatednesses):
-    print(f"{relatedness=:.3f}")
-    print(string)
+if __name__ == "__main__":
+    # Example usage
+    local_dir = r"D:\academic\A-LLMRec"  # Replace with the path to the cloned repo if needed
+    csv_file = r"D:\academic\CodeUnderstandingRAGGithubIssues\A-LLMRec_priority_issues.csv"  # Replace with your actual file path
+    url, title = get_top_issue(csv_file)
+    content = fetch_issue_content_with_comments(url)
+    print("Fetched content for embedding:")
+    print(content[:500])
+
+    df = pd.read_csv("./output/embedded.csv")
+    df["embedding"] = df["embedding"].apply(ast.literal_eval)
+    issue_category = classify_issue(local_dir, title, content)
+    print(issue_category)
+
+    strings, relatednesses = strings_ranked_by_relatedness(content, df, top_n=5)
+    print("\nTop related code blocks:")
+    for string, relatedness in zip(strings, relatednesses):
+        print(f"{relatedness=:.3f}")
+        print(string)

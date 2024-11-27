@@ -49,44 +49,44 @@ def get_readme_description(local_dir: str):
             print(f"Error generating description from README: {e}")
     return "Description unavailable."
 
+if __name__ == "__main__":
+    # Set your local repository path
+    local_dir = (
+        "../cloned_repo"  # Update to the actual path where your repository is cloned
+    )
+    repo_name = get_repo_name_from_git_config(local_dir)
+    repo_description = get_readme_description(local_dir)
 
-# Set your local repository path
-local_dir = (
-    "../cloned_repo"  # Update to the actual path where your repository is cloned
-)
-repo_name = get_repo_name_from_git_config(local_dir)
-repo_description = get_readme_description(local_dir)
+    df = pd.read_csv("../parsed.csv")
+    df["start_row"] = df["start_point"].str.extract(r"row=(\d+)")
+    df["end_row"] = df["end_point"].str.extract(r"row=(\d+)")
+    df["function_for_LLM"] = (
+        f"This is a function from the {repo_name} repository. {repo_description} "
+        "The file path is ./" + df["f_path"] + ". "
+        "The function starts at line "
+        + df["start_row"]
+        + " and ends at line "
+        + df["end_row"]
+        + ". <function_body>"
+        + df["function"]
+        + "<function_body>"
+    )
 
-df = pd.read_csv("../parsed.csv")
-df["start_row"] = df["start_point"].str.extract(r"row=(\d+)")
-df["end_row"] = df["end_point"].str.extract(r"row=(\d+)")
-df["function_for_LLM"] = (
-    f"This is a function from the {repo_name} repository. {repo_description} "
-    "The file path is ./" + df["f_path"] + ". "
-    "The function starts at line "
-    + df["start_row"]
-    + " and ends at line "
-    + df["end_row"]
-    + ". <function_body>"
-    + df["function"]
-    + "<function_body>"
-)
+    # Ensure the output directory exists
+    output_dir = "output"
+    os.makedirs(output_dir, exist_ok=True)
 
-# Ensure the output directory exists
-output_dir = "output"
-os.makedirs(output_dir, exist_ok=True)
-
-# Adding a progress bar to the embedding process
-tqdm.pandas()
-
-
-def embed_text(text):
-    try:
-        return get_embedding(text)
-    except Exception as e:
-        print(f"Error embedding text: {e}")
-        return None
+    # Adding a progress bar to the embedding process
+    tqdm.pandas()
 
 
-df["embedding"] = df["function_for_LLM"].progress_apply(embed_text)
-df.to_csv(os.path.join(output_dir, "embedded.csv"), index=False)
+    def embed_text(text):
+        try:
+            return get_embedding(text)
+        except Exception as e:
+            print(f"Error embedding text: {e}")
+            return None
+
+
+    df["embedding"] = df["function_for_LLM"].progress_apply(embed_text)
+    df.to_csv(os.path.join(output_dir, "embedded.csv"), index=False)

@@ -1,0 +1,11 @@
+url,priority,title,state
+https://github.com/ghdtjr/A-LLMRec/issues/10,13.74,Inconsistent result in Amazon_Beauty.,OPEN
+https://github.com/ghdtjr/A-LLMRec/issues/6,13.5,processing dataset errors,OPEN
+https://github.com/ghdtjr/A-LLMRec/issues/9,9.92,Issue with Input Length Error during Inference,CLOSED
+https://github.com/ghdtjr/A-LLMRec/issues/11,9.18,How to Enable hit@3 and hit@5 Accuracy Metrics in the Model,OPEN
+https://github.com/ghdtjr/A-LLMRec/issues/8,8.76,"RuntimeError: expected mat1 and mat2 to have the same dtype, but got: c10::Half != float",CLOSED
+https://github.com/ghdtjr/A-LLMRec/issues/4,8.52,The recommendation loss calculation seems different from the original paper?,CLOSED
+https://github.com/ghdtjr/A-LLMRec/issues/2,7.78,Invalid requirement in requirements.txt,CLOSED
+https://github.com/ghdtjr/A-LLMRec/issues/3,7.36,cuda out of memory,CLOSED
+https://github.com/ghdtjr/A-LLMRec/issues/7,7.2,Early stop,CLOSED
+https://github.com/ghdtjr/A-LLMRec/issues/1,7.14,Dataset,CLOSED
