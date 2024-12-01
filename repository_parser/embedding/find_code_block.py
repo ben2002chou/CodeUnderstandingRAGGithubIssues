@@ -76,10 +76,7 @@ def strings_ranked_by_relatedness(
         input=query,
     )
     query_embedding = query_embedding_response.data[0].embedding
-    strings_and_relatednesses = [
-        (row["function"], relatedness_fn(query_embedding, row["embedding"]))
-        for i, row in df.iterrows()
-    ]
+
     df['relatedness'] = df['embedding'].apply(lambda x: relatedness_fn(query_embedding, x))
     df = df.sort_values(by='similarity', ascending=False)
     df = df.reset_index(drop=True)
@@ -88,24 +85,23 @@ def strings_ranked_by_relatedness(
     return res.loc[0, 'function'], (res.loc[0, 'f_path'], res.loc[0, 'start_row'])
 
 
-def get_place_to_put(local_dir, csv_file):
-    url, title = get_top_issue(csv_file)
+def get_place_to_put(url, title, embedding_df):
     content = fetch_issue_content_with_comments(url)
     print("Fetched content for embedding:")
     print(content[:500])
-
-    df = pd.read_csv("./output/embedded.csv")
-    df["embedding"] = df["embedding"].apply(ast.literal_eval)
     issue_category = classify_issue(local_dir, title, content)
 
     try:
-        issue_category == int(issue_category)
+        issue_category = int(issue_category)
     except ValueError:
         print("GPT generated wrong issue post category.")
+        print(issue_category)
+        raise
     
+    print("Issue classfied. Issue category: ", issue_category)
     if issue_category == 2:
         print("code provided, editing it")
-        function_body, place_to_put = sparse_retrieve(content, df)
+        function_body, place_to_put = sparse_retrieve(content, embedding_df)
     
     elif issue_category == 3:
         print("code not provided, general question")
@@ -117,9 +113,9 @@ def get_place_to_put(local_dir, csv_file):
         print("Generated issue embedding.")
         
         # Find the most related code blocks based on the issue content embedding
-        function_body, place_to_put = strings_ranked_by_relatedness(content, df)
+        function_body, place_to_put = strings_ranked_by_relatedness(content, embedding_df)
     else:
-        raise
+        return
     
     return function_body, place_to_put
 
@@ -127,18 +123,4 @@ if __name__ == "__main__":
     # Example usage
     local_dir = r"D:\academic\A-LLMRec"  # Replace with the path to the cloned repo if needed
     csv_file = r"D:\academic\CodeUnderstandingRAGGithubIssues\A-LLMRec_priority_issues.csv"  # Replace with your actual file path
-    url, title = get_top_issue(csv_file)
-    content = fetch_issue_content_with_comments(url)
-    print("Fetched content for embedding:")
-    print(content[:500])
-
-    df = pd.read_csv("./output/embedded.csv")
-    df["embedding"] = df["embedding"].apply(ast.literal_eval)
-    issue_category = classify_issue(local_dir, title, content)
-    print(issue_category)
-
-    strings, relatednesses = strings_ranked_by_relatedness(content, df, top_n=5)
-    print("\nTop related code blocks:")
-    for string, relatedness in zip(strings, relatednesses):
-        print(f"{relatedness=:.3f}")
-        print(string)
+    print(get_place_to_put(local_dir, csv_file))

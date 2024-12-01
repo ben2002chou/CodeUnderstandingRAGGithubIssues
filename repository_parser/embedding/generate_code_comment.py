@@ -4,9 +4,11 @@ from openai import OpenAI
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
-
+from find_code_block import get_place_to_put
 load_dotenv()
-
+import ast
+from openai_embedding import get_readme_description
+from baseline import get_baseline_comment
 api_key = os.getenv("OPENAI_API_KEY")
 client = OpenAI()
 
@@ -19,6 +21,13 @@ def get_top_issue(csv_file):
     print(f"Top issue URL: {top_issue['url']}, Title: {top_issue['title']}")
     return top_issue["url"], top_issue["title"]
 
+def get_top_n_issue(csv_file, n):
+    """Retrieve the top-n issue from the CSV file."""
+    df = pd.read_csv(csv_file)
+    df = df.sort_values(by="priority", ascending=False)  # Sort by priority
+    top_issue = df.head(n)
+    
+    return zip(top_issue["url"], top_issue["title"])
 
 def fetch_issue_content(url):
     """Fetch the content of a GitHub issue from the provided URL."""
@@ -112,22 +121,32 @@ def generate_overall_code_comment(issue_title, issue_content, relevant_summaries
 
 
 # Example usage
-local_dir = "../cloned_repo"  # Replace with the path to the cloned repo
-csv_file = "/Users/Ben/Documents/GitHub/CodeUnderstandingRAGGithubIssues/github_issues_sorting/AutoGPT_priority_issues.csv"  # Replace with your actual file path
-url, title = get_top_issue(csv_file)
-content = fetch_issue_content(url)
-comments = fetch_issue_comments(url)
+if __name__ == "__main__":
+    local_dir = r"D:\academic\A-LLMRec"  # Replace with the path to the cloned repo
+    csv_file = r"D:\academic\CodeUnderstandingRAGGithubIssues\A-LLMRec_priority_issues.csv"  # Replace with your actual file path
+    
+    df = pd.read_csv("./output/embedded.csv")
+    df["embedding"] = df["embedding"].apply(ast.literal_eval)
+    repo_des = get_readme_description(local_dir)
 
-# Check for solutions in each comment
-relevant_summaries = []
-for comment in comments:
-    summary = check_for_solution_in_comments(comment)
-    if summary:  # Only consider comments that contain a solution
-        relevant_summaries.append(summary)
+    for url, title in get_top_n_issue(csv_file, 3):
+        
+        content = fetch_issue_content(url)
+        comments = fetch_issue_comments(url)
+        function_body, (file_path, start_line) = get_place_to_put(url, title, df)
+        #baseline
+        baseline_result = get_baseline_comment(function_body, repo_des)
 
-# Generate overall code comment
-overall_comment = generate_overall_code_comment(
-    title, content, "\n".join(relevant_summaries)
-)
-print("\n--- Overall Code Comment ---\n")
-print(overall_comment)
+        #our method
+        # Check for solutions in each comment
+        relevant_summaries = []
+        for comment in comments:
+            summary = check_for_solution_in_comments(comment)
+            if summary:  # Only consider comments that contain a solution
+                relevant_summaries.append(summary)
+
+        overall_comment = generate_overall_code_comment(
+            title, content, "\n".join(relevant_summaries)
+        )
+        print("\n--- Overall Code Comment ---\n")
+        print(overall_comment)
