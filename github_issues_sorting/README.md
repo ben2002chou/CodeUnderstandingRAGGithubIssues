@@ -22,7 +22,7 @@ Arguments
 Example
 
 python3 issues_LLM_repo.py https://github.com/owner/repo 150 --verbose
-
+python3 issues_LLM_repo.py https://github.com/mir-evaluation/mir_eval 600 --verbose --disable-wordnet
 Environment Variables
 
 Create a .env file with your GitHub Personal Access Token:

@@ -28,15 +28,39 @@ def get_repo_name_from_git_config(local_dir: str):
 
 
 def get_readme_description(local_dir: str):
-    """Generate a description based on the content of the README.md file."""
+    """Generate a short and concise description based on the content of the README.md file."""
     readme_path = os.path.join(local_dir, "README.md")
     if os.path.exists(readme_path):
         with open(readme_path, "r", encoding="utf-8") as file:
             readme_content = file.read()
+
+        # Preprocess README to extract key sections
+        key_sections = []
+        for section in [
+            "# Introduction",
+            "# Overview",
+            "# Description",
+            "# Usage",
+            "# Features",
+        ]:
+            start = readme_content.lower().find(section.lower())
+            if start != -1:
+                end = readme_content.find(
+                    "\n#", start + 1
+                )  # Find the next section header
+                key_sections.append(readme_content[start : end if end != -1 else None])
+
+        # Truncate to the first X characters if necessary
+        truncated_content = (
+            "\n".join(key_sections) if key_sections else readme_content[:3000]
+        )
+
         try:
             prompt = (
                 "Provide a concise description of the following repository "
-                f"based on its README:\n\n{readme_content}"
+                "based on its README content:\n\n"
+                f"{truncated_content}\n\n"
+                "Keep the description short and focused."
             )
             response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
@@ -49,15 +73,15 @@ def get_readme_description(local_dir: str):
             print(f"Error generating description from README: {e}")
     return "Description unavailable."
 
+
 if __name__ == "__main__":
     # Set your local repository path
-    local_dir = (
-        "../cloned_repo"  # Update to the actual path where your repository is cloned
-    )
+    local_dir = "../cloned_repo_yt_dlp"  # Update to the actual path where your repository is cloned
     repo_name = get_repo_name_from_git_config(local_dir)
     repo_description = get_readme_description(local_dir)
+    print("current path: ", os.getcwd())
 
-    df = pd.read_csv("../parsed.csv")
+    df = pd.read_csv("parsed_yt_dlp.csv")
     df["start_row"] = df["start_point"].str.extract(r"row=(\d+)")
     df["end_row"] = df["end_point"].str.extract(r"row=(\d+)")
     df["function_for_LLM"] = (
@@ -73,12 +97,11 @@ if __name__ == "__main__":
     )
 
     # Ensure the output directory exists
-    output_dir = "output"
+    output_dir = "output_yt_dlp"
     os.makedirs(output_dir, exist_ok=True)
 
     # Adding a progress bar to the embedding process
     tqdm.pandas()
-
 
     def embed_text(text):
         try:
@@ -86,7 +109,6 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"Error embedding text: {e}")
             return None
-
 
     df["embedding"] = df["function_for_LLM"].progress_apply(embed_text)
     df.to_csv(os.path.join(output_dir, "embedded.csv"), index=False)

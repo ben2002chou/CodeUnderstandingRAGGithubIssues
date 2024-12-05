@@ -5,12 +5,13 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 from find_code_block import get_place_to_put
+
 load_dotenv()
 import ast
 from openai_embedding import get_readme_description
 from baseline import get_baseline_comment
-api_key = os.getenv("OPENAI_API_KEY")
-client = OpenAI()
+
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
 def get_top_issue(csv_file):
@@ -21,13 +22,15 @@ def get_top_issue(csv_file):
     print(f"Top issue URL: {top_issue['url']}, Title: {top_issue['title']}")
     return top_issue["url"], top_issue["title"]
 
+
 def get_top_n_issue(csv_file, n):
     """Retrieve the top-n issue from the CSV file."""
     df = pd.read_csv(csv_file)
     df = df.sort_values(by="priority", ascending=False)  # Sort by priority
     top_issue = df.head(n)
-    
+
     return zip(top_issue["url"], top_issue["title"])
+
 
 def fetch_issue_content(url):
     """Fetch the content of a GitHub issue from the provided URL."""
@@ -92,27 +95,61 @@ def check_for_solution_in_comments(comment):
         return None
 
 
-def generate_overall_code_comment(issue_title, issue_content, relevant_summaries):
-    """Generate a final code comment summarizing the problem, available solutions, and guidance."""
+def generate_overall_code_comment(
+    issue_title, issue_content, relevant_summaries, additional_context
+):
+    """Generate a concise and insightful code comment for developers."""
     prompt = f"""
-    Based on the following GitHub issue and its relevant comments, generate a code comment summarizing the problem, available solutions, and any guidance to prevent or address this issue in the future.
+    You are an experienced software engineer reviewing the following Python code to identify potential issues and provide actionable recommendations for improvement. The goal is to generate a code comment that is highly relevant to the provided code and helps developers understand, use, or improve it effectively.
 
-    Issue Title: {issue_title}
-    Issue Content: {issue_content}
+    ### Code Snippet:
+    <code>
+    {additional_context}
+    </code>
 
-    Relevant Comments and Solutions:
+    ### Context from Related GitHub Issue:
+    <issue_title>
+    {issue_title}
+    </issue_title>
+
+    <issue_content>
+    {issue_content}
+    </issue_content>
+
+    ### Relevant Discussion Summaries:
     {relevant_summaries}
 
-    Generate a concise and helpful code comment for developers.
+    ---
+
+    **Your Task**:
+    Write a clear, concise, and actionable code comment for developers. The comment must:
+    1. Focus primarily on the provided code snippet, identifying potential issues, assumptions, or edge cases.
+    2. Provide non-obvious insights that are directly relevant to the code. Highlight functionality, design decisions, or risks developers may not immediately notice.
+    3. Suggest specific improvements to make the code more robust, maintainable, or efficient.
+    4. Reference the issue and discussion **only when they enhance the understanding or application of the code**.
+
+    **Comment Format**:
+    Use Python-style docstring or inline comments. Structure the comment to:
+    - Summarize what the code does and its purpose.
+    - Identify potential issues, pitfalls, or limitations (if any).
+    - Suggest actionable improvements with specific examples or alternatives.
+
+    ---
+
+    Focus on making the comment **highly relevant to the code** while being informed by the issue discussion. Avoid generic or redundant suggestions.
     """
     try:
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4",
             messages=[
-                {"role": "system", "content": "You are a helpful summarizing AI."},
+                {
+                    "role": "system",
+                    "content": "You are a highly skilled code reviewer.",
+                },
                 {"role": "user", "content": prompt},
             ],
-            max_tokens=300,
+            max_tokens=400,
+            temperature=0,
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
@@ -120,33 +157,45 @@ def generate_overall_code_comment(issue_title, issue_content, relevant_summaries
         return "Error generating overall code comment."
 
 
-# Example usage
 if __name__ == "__main__":
     local_dir = r"D:\academic\A-LLMRec"  # Replace with the path to the cloned repo
     csv_file = r"D:\academic\CodeUnderstandingRAGGithubIssues\A-LLMRec_priority_issues.csv"  # Replace with your actual file path
-    
+
     df = pd.read_csv("./output/embedded.csv")
     df["embedding"] = df["embedding"].apply(ast.literal_eval)
     repo_des = get_readme_description(local_dir)
 
     for url, title in get_top_n_issue(csv_file, 3):
-        
+        # Fetch data
         content = fetch_issue_content(url)
         comments = fetch_issue_comments(url)
-        function_body, (file_path, start_line) = get_place_to_put(url, title, df)
-        #baseline
+
+        # Get function body or fallback to README
+        try:
+            function_body, (file_path, start_line) = get_place_to_put(url, title, df)
+        except Exception as e:
+            print(f"Error retrieving function body: {e}")
+            function_body = repo_des
+
+        # Determine additional context
+        additional_context = function_body if function_body.strip() else repo_des
+
+        # Baseline
         baseline_result = get_baseline_comment(function_body, repo_des)
 
-        #our method
-        # Check for solutions in each comment
-        relevant_summaries = []
-        for comment in comments:
-            summary = check_for_solution_in_comments(comment)
-            if summary:  # Only consider comments that contain a solution
-                relevant_summaries.append(summary)
+        # Our method: Generate overall comment
+        relevant_summaries = [
+            check_for_solution_in_comments(comment) for comment in comments
+        ]
+        relevant_summaries = [
+            summary for summary in relevant_summaries if summary
+        ]  # Filter non-empty summaries
 
         overall_comment = generate_overall_code_comment(
-            title, content, "\n".join(relevant_summaries)
+            issue_title=title,
+            issue_content=content,
+            relevant_summaries="\n".join(relevant_summaries),
+            additional_context=additional_context,
         )
         print("\n--- Overall Code Comment ---\n")
         print(overall_comment)

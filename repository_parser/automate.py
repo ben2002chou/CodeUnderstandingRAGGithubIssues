@@ -19,7 +19,7 @@ def clone_repository(repo_url, clone_path):
 
 def run_parser():
     try:
-        subprocess.run(["python", "parser.py"], check=True)
+        subprocess.run(["python", "repository_parser/parser.py"], check=True)
         print("Parsing completed and CSV generated.")
         return True
     except subprocess.CalledProcessError as e:
@@ -58,11 +58,10 @@ def generate_code_comment():
 
 
 if __name__ == "__main__":
-    repo_url = "https://github.com/Significant-Gravitas/AutoGPT.git"
-    clone_path = "./cloned_repo"
+    repo_url = "https://github.com/yt-dlp/yt-dlp.git"
+    clone_path = "./cloned_rep_yt_dlp"
 
     if clone_repository(repo_url, clone_path):
         if run_parser():
             if run_embedding():
-                find_code_block()
-                generate_code_comment()
+                pass

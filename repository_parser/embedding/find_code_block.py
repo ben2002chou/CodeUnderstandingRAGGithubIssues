@@ -8,10 +8,10 @@ from scipy import spatial  # for calculating vector similarities for search
 import ast
 from issue_classifier import classify_issue
 from sparse_retrieval import sparse_retrieve
+
 load_dotenv()
 
-api_key = os.getenv("OPENAI_API_KEY")
-client = OpenAI()
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
 def get_embedding(text, model="text-embedding-3-small"):
@@ -77,15 +77,17 @@ def strings_ranked_by_relatedness(
     )
     query_embedding = query_embedding_response.data[0].embedding
 
-    df['relatedness'] = df['embedding'].apply(lambda x: relatedness_fn(query_embedding, x))
-    df = df.sort_values(by='similarity', ascending=False)
+    df["relatedness"] = df["embedding"].apply(
+        lambda x: relatedness_fn(query_embedding, x)
+    )
+    df = df.sort_values(by="relatedness", ascending=False)
     df = df.reset_index(drop=True)
     res = df.head(1)
 
-    return res.loc[0, 'function'], (res.loc[0, 'f_path'], res.loc[0, 'start_row'])
+    return res.loc[0, "function"], (res.loc[0, "f_path"], res.loc[0, "start_row"])
 
 
-def get_place_to_put(url, title, embedding_df):
+def get_place_to_put(local_dir, url, title, embedding_df):
     content = fetch_issue_content_with_comments(url)
     print("Fetched content for embedding:")
     print(content[:500])
@@ -97,30 +99,35 @@ def get_place_to_put(url, title, embedding_df):
         print("GPT generated wrong issue post category.")
         print(issue_category)
         raise
-    
+
     print("Issue classfied. Issue category: ", issue_category)
     if issue_category == 2:
         print("code provided, editing it")
         function_body, place_to_put = sparse_retrieve(content, embedding_df)
-    
+
     elif issue_category == 3:
         print("code not provided, general question")
-        function_body , place_to_put = "", ("README.md", -1)
+        function_body, place_to_put = "", ("README.md", -1)
 
     elif issue_category == 4 or issue_category == 1:
         print("code not provided, but can be found in the repository")
         issue_embedding = get_embedding(content)
         print("Generated issue embedding.")
-        
+
         # Find the most related code blocks based on the issue content embedding
-        function_body, place_to_put = strings_ranked_by_relatedness(content, embedding_df)
+        function_body, place_to_put = strings_ranked_by_relatedness(
+            content, embedding_df
+        )
     else:
         return
-    
+
     return function_body, place_to_put
+
 
 if __name__ == "__main__":
     # Example usage
-    local_dir = r"D:\academic\A-LLMRec"  # Replace with the path to the cloned repo if needed
+    local_dir = (
+        r"D:\academic\A-LLMRec"  # Replace with the path to the cloned repo if needed
+    )
     csv_file = r"D:\academic\CodeUnderstandingRAGGithubIssues\A-LLMRec_priority_issues.csv"  # Replace with your actual file path
     print(get_place_to_put(local_dir, csv_file))
